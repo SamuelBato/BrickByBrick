@@ -86,7 +86,7 @@ export function useReel() {
     [clips],
   );
 
-  // The server repeats the veto and deletes these clips from Blob after a successful render.
+  // The server deletes these clips from Blob after a successful render.
   async function createReel() {
     setRendering(true);
     setError(null);

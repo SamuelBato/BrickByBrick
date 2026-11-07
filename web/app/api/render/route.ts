@@ -32,13 +32,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Neplatné údaje o klipoch." }, { status: 400 });
   }
 
-  // shortcut: the analysis comes from the browser, so a password holder could forge it; keep it server-side if outsiders ever get access.
   const { clips } = parsed.data;
   const plan = planReel(clips);
-  if (plan.gate !== "ready") {
-    return NextResponse.json({ error: "Reel sa nedá vytvoriť, skontroluj vyradené klipy." }, { status: 409 });
-  }
-
   const urls = new Map(clips.map(({ id, url }) => [id, url]));
   const dir = await mkdtemp(join(tmpdir(), "bbb-"));
   try {

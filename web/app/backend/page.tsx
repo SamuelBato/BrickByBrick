@@ -31,7 +31,7 @@ export default function BackendPage() {
             <li key={clip.id}>
               {clip.name}: {clip.status} {clip.status === "uploading" && `${Math.round(clip.progress)} %`}
               {clip.error && ` – ${clip.error}`}
-              {verdict && ` – ${verdict.status}${verdict.reason ? ` (${verdict.reason})` : ""}`}
+              {verdict && ` – ${verdict.status}`}
               {clip.analysis && ` – ${clip.analysis.caption_seed}`}
               {clip.analysis && (
                 <details>
@@ -44,12 +44,7 @@ export default function BackendPage() {
         })}
       </ul>
 
-      <p>Stav: {plan.gate}</p>
-      {plan.warnings.map((warning) => (
-        <p key={warning}>{warning}</p>
-      ))}
-
-      <button type="button" disabled={busy || reel !== null || plan.gate !== "ready"} onClick={createReel}>
+      <button type="button" disabled={busy || reel !== null || plan.timeline.length === 0} onClick={createReel}>
         {rendering ? "Vytváram Reel…" : "Vytvoriť Reel"}
       </button>
       {reel && (

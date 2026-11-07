@@ -34,7 +34,7 @@ function runFfmpeg(args: string[], cwd?: string) {
   });
 }
 
-// shortcut: only the first 60 s are analysed, and planReel only cuts from those 60 s, so nothing unchecked is published.
+// shortcut: only the first 60 s are analysed and planReel only cuts from them; raise MAX_ANALYZED_S for longer clips.
 export async function makeProxy(url: string, dir: string) {
   const file = join(dir, "proxy.mp4");
   const stderr = await runFfmpeg([
