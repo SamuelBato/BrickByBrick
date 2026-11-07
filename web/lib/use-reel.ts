@@ -63,12 +63,14 @@ export function useReel() {
     }
     setError(null);
 
-    const queue = files.map((file) => ({ file, id: crypto.randomUUID() }));
+    const added = files.map((file) => ({ file, id: crypto.randomUUID() }));
     setClips((current) => [
       ...current,
-      ...queue.map(({ file, id }): ReelClip => ({ id, name: file.name, status: "uploading", progress: 0 })),
+      ...added.map(({ file, id }): ReelClip => ({ id, name: file.name, status: "uploading", progress: 0 })),
     ]);
 
+    // Workers empty their own copy, because React may run the state update above only after they start.
+    const queue = [...added];
     await Promise.all(
       Array.from({ length: PARALLEL_CLIPS }, async () => {
         for (let next = queue.shift(); next; next = queue.shift()) await processClip(next.id, next.file);

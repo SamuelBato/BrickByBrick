@@ -1,17 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ReelClip } from "@/lib/use-reel";
 import type { ClipVerdict } from "@/lib/plan";
-import { useReel } from "./use-reel-mock"; // Step 2: import { useReel } from "@/lib/use-reel";
+import { useReel, type ReelClip } from "@/lib/use-reel";
 
 function Chip({ clip, verdict }: { clip: ReelClip; verdict?: ClipVerdict }) {
   if (clip.status === "uploading") return <span className="chip">Nahrávam {Math.round(clip.progress)} %</span>;
   if (clip.status === "analyzing") return <span className="chip">Analyzujem…</span>;
   if (clip.status === "error") return <span className="chip chip-bad">Chyba</span>;
   if (verdict?.status === "used") return <span className="chip chip-ok">Použitý</span>;
-  if (verdict?.status === "spare") return <span className="chip">Náhradný</span>;
-  return <span className="chip chip-bad">Vyradený</span>;
+  return <span className="chip">Náhradný</span>;
 }
 
 // Counts seconds while mounted, so a long render never looks frozen.
@@ -70,33 +68,21 @@ export default function ReelApp() {
         <section className="card">
           <h2>2. Klipy</h2>
           <ul className="clips">
-            {clips.map((clip) => {
-              const verdict = verdictOf(clip.id);
-              return (
-                <li key={clip.id}>
-                  <span className="clip-name">{clip.name}</span>
-                  <Chip clip={clip} verdict={verdict} />
-                  {(clip.error ?? verdict?.reason) && <span className="reason">{clip.error ?? verdict?.reason}</span>}
-                </li>
-              );
-            })}
+            {clips.map((clip) => (
+              <li key={clip.id}>
+                <span className="clip-name">{clip.name}</span>
+                <Chip clip={clip} verdict={verdictOf(clip.id)} />
+                {clip.error && <span className="reason">{clip.error}</span>}
+              </li>
+            ))}
           </ul>
-          {plan.warnings.map((warning) => (
-            <p key={warning} className="warning">{warning}</p>
-          ))}
           {uploading > 0 && <Loading text={`Nahrávam klipy (${uploading} zostáva)…`} />}
           {uploading === 0 && analyzing > 0 && <Loading text={`Analyzujem klipy (${analyzing} zostáva)…`} />}
         </section>
       )}
 
-      {analyzed && plan.gate === "needs_more_clips" && (
-        <p className="notice">
-          Pridaj ešte {plan.missingClips} {plan.missingClips === 1 ? "použiteľný klip" : "použiteľné klipy"}. Reel potrebuje aspoň 3.
-        </p>
-      )}
-
       {analyzed && !reel && (
-        <button className="big" disabled={busy || plan.gate !== "ready"} onClick={createReel}>
+        <button className="big" disabled={busy || plan.timeline.length === 0} onClick={createReel}>
           {rendering ? "Vytváram Reel…" : "Vytvoriť Reel"}
         </button>
       )}
@@ -117,7 +103,7 @@ export default function ReelApp() {
       {error && (
         <section className="card card-error">
           <p>{error}</p>
-          {analyzed && plan.gate === "ready" && !reel && (
+          {analyzed && plan.timeline.length > 0 && !reel && (
             <button disabled={busy} onClick={createReel}>Skúsiť znova</button>
           )}
           <button disabled={busy} onClick={reset}>Začať odznova</button>
