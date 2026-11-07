@@ -1,0 +1,10 @@
+# Person B folder, stays local
+B/
+CLAUDE.local.md
+
+# Secrets and raw data never enter the repo
+.env*
+data/
+node_modules/
+*.mp4
+*.mov
