@@ -1,7 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { ClipVerdict } from "@/lib/plan";
+import ReelResult from "@/components/reel-result";
+import { CAPTION_MODES, REEL_LENGTHS, REEL_STYLES, type ClipVerdict, type ReelOptions } from "@/lib/plan";
 import { useReel, type ReelClip } from "@/lib/use-reel";
 
 function Chip({ clip, verdict }: { clip: ReelClip; verdict?: ClipVerdict }) {
@@ -34,8 +36,61 @@ function Loading({ text, timer }: { text: string; timer?: boolean }) {
   );
 }
 
-export default function ReelApp() {
-  const { clips, plan, busy, rendering, reel, error, addClips, createReel, reset } = useReel();
+function OptionsCard({ options, onChange, lengthS, shots }: {
+  options: ReelOptions;
+  onChange: (options: ReelOptions) => void;
+  lengthS: number;
+  shots: number;
+}) {
+  return (
+    <section className="card">
+      <h2>3. Nastavenie Reelu</h2>
+      <div className="form">
+        <label>
+          Dĺžka
+          <select
+            value={options.lengthS}
+            onChange={(event) => onChange({ ...options, lengthS: Number(event.target.value) as ReelOptions["lengthS"] })}
+          >
+            {REEL_LENGTHS.map((length) => <option key={length} value={length}>{length} s</option>)}
+          </select>
+        </label>
+        <label>
+          Štýl strihu
+          <select
+            value={options.style}
+            onChange={(event) => onChange({ ...options, style: event.target.value as ReelOptions["style"] })}
+          >
+            {Object.entries(REEL_STYLES).map(([id, { label }]) => <option key={id} value={id}>{label}</option>)}
+          </select>
+        </label>
+        <label>
+          Popisky vo videu
+          <select
+            value={options.captions}
+            onChange={(event) => onChange({ ...options, captions: event.target.value as ReelOptions["captions"] })}
+          >
+            {Object.entries(CAPTION_MODES).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+          </select>
+        </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={options.badges}
+            onChange={(event) => onChange({ ...options, badges: event.target.checked })}
+          />
+          Odznak fázy stavby
+        </label>
+      </div>
+      <p className="reason">Reel bude mať {Math.round(lengthS)} s, počet klipov: {shots}.</p>
+    </section>
+  );
+}
+
+export default function ReelApp({ stavbaId }: { stavbaId: string }) {
+  const { clips, options, setOptions, setCaption, plan, busy, rendering, reel, error, addClips, createReel, reset } =
+    useReel(stavbaId);
+  const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
   const verdictOf = (id: string) => plan.verdicts.find((verdict) => verdict.id === id);
   const uploading = clips.filter(({ status }) => status === "uploading").length;
@@ -73,12 +128,26 @@ export default function ReelApp() {
                 <span className="clip-name">{clip.name}</span>
                 <Chip clip={clip} verdict={verdictOf(clip.id)} />
                 {clip.error && <span className="reason">{clip.error}</span>}
+                {clip.analysis && options.captions !== "off" && !reel && (
+                  <input
+                    className="caption-input"
+                    aria-label={`Popisok klipu ${clip.name}`}
+                    maxLength={80}
+                    value={clip.analysis.caption_seed}
+                    disabled={busy}
+                    onChange={(event) => setCaption(clip.id, event.target.value)}
+                  />
+                )}
               </li>
             ))}
           </ul>
           {uploading > 0 && <Loading text={`Nahrávam klipy (${uploading} zostáva)…`} />}
           {uploading === 0 && analyzing > 0 && <Loading text={`Analyzujem klipy (${analyzing} zostáva)…`} />}
         </section>
+      )}
+
+      {analyzed && !reel && (
+        <OptionsCard options={options} onChange={setOptions} lengthS={plan.lengthS} shots={plan.timeline.length} />
       )}
 
       {analyzed && !reel && (
@@ -91,12 +160,16 @@ export default function ReelApp() {
 
       {reel && (
         <section className="card">
-          <h2>3. Hotový Reel</h2>
-          <video className="reel" src={reel.url} controls playsInline />
-          <a className="button big" href={reel.downloadUrl} download="brickbybrick-reel.mp4">
-            Stiahnuť MP4
-          </a>
-          <button onClick={reset}>Nový Reel</button>
+          <h2>4. Hotový Reel</h2>
+          <ReelResult reel={reel} />
+          <button
+            onClick={() => {
+              reset();
+              router.refresh();
+            }}
+          >
+            Nový Reel
+          </button>
         </section>
       )}
 

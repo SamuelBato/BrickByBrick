@@ -3,13 +3,18 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import ffmpegPath from "ffmpeg-static";
 import { badgeImage, captionImage } from "./overlay";
-import { MAX_ANALYZED_S, type TimelineClip } from "./plan";
+import { MAX_ANALYZED_S, REEL_STYLES, type ReelOptions, type TimelineClip } from "./plan";
 
 const STDERR_TAIL = 20_000;
 const FFMPEG_TIMEOUT_MS = 280_000;
 const BADGE_SECONDS = "between(t,0.3,2.8)";
 // Only plain video files are read, so a crafted playlist in Blob cannot make ffmpeg fetch other addresses.
 const CLIP_FORMAT = ["-format_whitelist", "mov,mp4,avi,matroska,webm"];
+const FINAL_VIDEO = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "21"];
+// With transitions the parts are encoded twice, so the first pass only has to be quick and clean.
+const DRAFT_VIDEO = ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "16"];
+const SILENCE = ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"];
+const AUDIO = ["-c:a", "aac", "-b:a", "128k"];
 
 function runFfmpeg(args: string[], cwd?: string) {
   return new Promise<string>((resolve, reject) => {
@@ -64,15 +69,46 @@ export async function makeProxy(url: string, dir: string) {
   return { file, durationS };
 }
 
+async function joinWithTransition(parts: string[], lengths: number[], transition: string, overlapS: number, dir: string) {
+  let filter = "";
+  let last = "0:v";
+  let totalS = lengths[0];
+  for (let index = 1; index < parts.length; index++) {
+    // A very short clip gets a shorter transition, because each one needs footage from both sides.
+    const duration = Math.min(overlapS, lengths[index - 1] / 2, lengths[index] / 2);
+    filter += `[${last}][${index}:v]xfade=transition=${transition}:duration=${duration}:offset=${totalS - duration}[joined${index}];`;
+    last = `joined${index}`;
+    totalS += lengths[index] - duration;
+  }
+
+  await runFfmpeg(
+    [
+      ...parts.flatMap((part) => ["-i", part]),
+      ...SILENCE,
+      "-filter_complex", `${filter}[${last}]format=yuv420p[video]`,
+      "-map", "[video]",
+      "-map", `${parts.length}:a:0`,
+      "-t", String(totalS),
+      ...FINAL_VIDEO,
+      ...AUDIO,
+      "-movflags", "+faststart",
+      "reel.mp4",
+    ],
+    dir,
+  );
+}
+
 // Clips are encoded one at a time to stay inside the Vercel memory limit. The Reel is silent on purpose.
-export async function renderReel(clips: (TimelineClip & { url: string })[], dir: string) {
+export async function renderReel(clips: (TimelineClip & { url: string })[], dir: string, options: ReelOptions) {
+  const { grade, overlapS, transition } = REEL_STYLES[options.style];
+  const joinWith = clips.length > 1 ? transition : null;
   const parts: string[] = [];
   for (const [index, clip] of clips.entries()) {
     const overlays: { file: string; enable?: string }[] = [];
 
     if (clip.caption) {
       const file = `caption-${index}.png`;
-      await writeFile(join(dir, file), await captionImage(clip.caption));
+      await writeFile(join(dir, file), await captionImage(clip.caption, options.captions === "center" ? "center" : "bottom"));
       overlays.push({ file });
     }
     if (clip.badge && clip.badge !== clips[index - 1]?.badge) {
@@ -81,7 +117,7 @@ export async function renderReel(clips: (TimelineClip & { url: string })[], dir:
       overlays.push({ file, enable: BADGE_SECONDS });
     }
 
-    let filter = "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30[base]";
+    let filter = `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30${grade ? `,${grade}` : ""}[base]`;
     let last = "base";
     for (const [position, { enable }] of overlays.entries()) {
       const next = `layer${position}`;
@@ -99,8 +135,7 @@ export async function renderReel(clips: (TimelineClip & { url: string })[], dir:
         "-t", seconds,
         ...CLIP_FORMAT,
         "-i", clip.url,
-        "-f", "lavfi",
-        "-i", "anullsrc=r=48000:cl=stereo",
+        ...SILENCE,
         ...overlays.flatMap(({ file }) => ["-i", file]),
         "-filter_complex", filter,
         "-map", "[video]",
@@ -108,16 +143,19 @@ export async function renderReel(clips: (TimelineClip & { url: string })[], dir:
         "-shortest",
         // -shortest alone lets audio overrun the video, which freezes the picture at each cut after concat.
         "-t", seconds,
-        "-c:v", "libx264",
-        "-preset", "veryfast",
-        "-crf", "21",
-        "-c:a", "aac",
-        "-b:a", "128k",
+        ...(joinWith ? DRAFT_VIDEO : FINAL_VIDEO),
+        ...AUDIO,
         part,
       ],
       dir,
     );
     parts.push(part);
+  }
+
+  if (joinWith) {
+    const lengths = clips.map(({ startS, endS }) => endS - startS);
+    await joinWithTransition(parts, lengths, joinWith, overlapS, dir);
+    return join(dir, "reel.mp4");
   }
 
   await writeFile(join(dir, "list.txt"), parts.map((part) => `file '${part}'`).join("\n"));

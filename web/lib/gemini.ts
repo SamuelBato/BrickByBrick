@@ -11,6 +11,25 @@ const PROMPT = `You analyse one raw video clip from a construction site in Slova
 - caption_seed: a short Slovak caption of at most 6 words, with correct diacritics, based only on what is seen or heard.
 - Never invent anything.`;
 
+// Text-only call for the description pasted under the Reel on Instagram.
+export async function writePopis(stavbaName: string, subjects: string[]) {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const response = await ai.models.generateContent({
+    model: process.env.GEMINI_MODEL_VLM ?? "gemini-3.5-flash-lite",
+    contents: `Write an Instagram Reel description in Slovak, with correct diacritics, for a building company.
+
+Building project: ${stavbaName}
+Scenes in the Reel:
+${subjects.map((subject) => `- ${subject}`).join("\n")}
+
+- 2 to 3 short sentences, then 5 relevant hashtags on a new line.
+- Use only the facts above. Never invent anything.
+- Reply with the description only.`,
+    config: { temperature: 0.6 },
+  });
+  return response.text?.trim() ?? "";
+}
+
 // One retry covers a temporary Gemini error or a broken JSON answer.
 export async function analyzeVideo(video: Buffer) {
   try {

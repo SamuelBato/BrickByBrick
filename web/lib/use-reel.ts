@@ -3,7 +3,7 @@
 import { upload } from "@vercel/blob/client";
 import { useMemo, useState } from "react";
 import type { AssetAnalysis } from "./analysis-schema";
-import { MAX_CLIP_BYTES, MAX_CLIPS, planReel } from "./plan";
+import { DEFAULT_OPTIONS, MAX_CLIP_BYTES, MAX_CLIPS, planReel, type ReelOptions } from "./plan";
 
 const PARALLEL_CLIPS = 3;
 
@@ -18,14 +18,24 @@ export type ReelClip = {
   error?: string;
 };
 
-export function useReel() {
+export function useReel(stavbaId: string) {
   const [clips, setClips] = useState<ReelClip[]>([]);
+  const [options, setOptions] = useState<ReelOptions>(DEFAULT_OPTIONS);
   const [error, setError] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
-  const [reel, setReel] = useState<{ url: string; downloadUrl: string } | null>(null);
+  const [reel, setReel] = useState<{ url: string; downloadUrl: string; popis: string } | null>(null);
 
   const update = (id: string, patch: Partial<ReelClip>) =>
     setClips((current) => current.map((clip) => (clip.id === id ? { ...clip, ...patch } : clip)));
+
+  const setCaption = (id: string, caption: string) =>
+    setClips((current) =>
+      current.map((clip) =>
+        clip.id === id && clip.analysis
+          ? { ...clip, analysis: { ...clip.analysis, caption_seed: caption } }
+          : clip,
+      ),
+    );
 
   async function processClip(id: string, file: File) {
     try {
@@ -84,8 +94,9 @@ export function useReel() {
         clips.flatMap(({ id, durationS, analysis }) =>
           analysis && durationS !== undefined ? [{ id, durationS, analysis }] : [],
         ),
+        options,
       ),
-    [clips],
+    [clips, options],
   );
 
   // The server deletes these clips from Blob after a successful render.
@@ -96,7 +107,7 @@ export function useReel() {
       const response = await fetch("/api/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clips: clips.filter((clip) => clip.analysis && clip.url) }),
+        body: JSON.stringify({ stavbaId, options, clips: clips.filter((clip) => clip.analysis && clip.url) }),
       });
       const result = await response.json().catch(() => ({ error: "Render zlyhal." }));
       if (!response.ok) throw new Error(result.error);
@@ -123,5 +134,5 @@ export function useReel() {
     setReel(null);
   };
 
-  return { clips, plan, busy, rendering, reel, error, addClips, createReel, reset };
+  return { clips, options, setOptions, setCaption, plan, busy, rendering, reel, error, addClips, createReel, reset };
 }
