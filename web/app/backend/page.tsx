@@ -33,6 +33,12 @@ export default function BackendPage() {
               {clip.error && ` – ${clip.error}`}
               {verdict && ` – ${verdict.status}${verdict.reason ? ` (${verdict.reason})` : ""}`}
               {clip.analysis && ` – ${clip.analysis.caption_seed}`}
+              {clip.analysis && (
+                <details>
+                  <summary>Detail analýzy</summary>
+                  <pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(clip.analysis, null, 2)}</pre>
+                </details>
+              )}
             </li>
           );
         })}

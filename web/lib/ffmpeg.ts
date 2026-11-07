@@ -8,6 +8,8 @@ import { MAX_ANALYZED_S, type TimelineClip } from "./plan";
 const STDERR_TAIL = 20_000;
 const FFMPEG_TIMEOUT_MS = 280_000;
 const BADGE_SECONDS = "between(t,0.3,2.8)";
+// Forces the MP4/MOV reader, so a crafted playlist in Blob cannot make ffmpeg fetch other addresses.
+const CLIP_FORMAT = ["-f", "mov"];
 
 function runFfmpeg(args: string[], cwd?: string) {
   return new Promise<string>((resolve, reject) => {
@@ -37,6 +39,7 @@ export async function makeProxy(url: string, dir: string) {
   const file = join(dir, "proxy.mp4");
   const stderr = await runFfmpeg([
     "-t", String(MAX_ANALYZED_S),
+    ...CLIP_FORMAT,
     "-i", url,
     "-map", "0:v:0",
     "-map", "0:a:0?",
@@ -89,10 +92,12 @@ export async function renderReel(clips: (TimelineClip & { url: string })[], dir:
     filter += `;[${last}]format=yuv420p[video]`;
 
     const part = `part-${index}.mp4`;
+    const seconds = String(clip.endS - clip.startS);
     await runFfmpeg(
       [
         "-ss", String(clip.startS),
-        "-t", String(clip.endS - clip.startS),
+        "-t", seconds,
+        ...CLIP_FORMAT,
         "-i", clip.url,
         "-f", "lavfi",
         "-i", "anullsrc=r=48000:cl=stereo",
@@ -101,6 +106,8 @@ export async function renderReel(clips: (TimelineClip & { url: string })[], dir:
         "-map", "[video]",
         "-map", "1:a:0",
         "-shortest",
+        // -shortest alone lets audio overrun the video, which freezes the picture at each cut after concat.
+        "-t", seconds,
         "-c:v", "libx264",
         "-preset", "veryfast",
         "-crf", "21",
