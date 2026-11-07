@@ -8,8 +8,8 @@ import { MAX_ANALYZED_S, type TimelineClip } from "./plan";
 const STDERR_TAIL = 20_000;
 const FFMPEG_TIMEOUT_MS = 280_000;
 const BADGE_SECONDS = "between(t,0.3,2.8)";
-// Forces the MP4/MOV reader, so a crafted playlist in Blob cannot make ffmpeg fetch other addresses.
-const CLIP_FORMAT = ["-f", "mov"];
+// Only plain video files are read, so a crafted playlist in Blob cannot make ffmpeg fetch other addresses.
+const CLIP_FORMAT = ["-format_whitelist", "mov,mp4,avi,matroska,webm"];
 
 function runFfmpeg(args: string[], cwd?: string) {
   return new Promise<string>((resolve, reject) => {

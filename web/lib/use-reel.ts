@@ -3,7 +3,7 @@
 import { upload } from "@vercel/blob/client";
 import { useMemo, useState } from "react";
 import type { AssetAnalysis } from "./analysis-schema";
-import { MAX_CLIPS, planReel } from "./plan";
+import { MAX_CLIP_BYTES, MAX_CLIPS, planReel } from "./plan";
 
 const PARALLEL_CLIPS = 3;
 
@@ -30,6 +30,7 @@ export function useReel() {
   async function processClip(id: string, file: File) {
     try {
       if (!file.type.startsWith("video/")) throw new Error("Súbor nie je video.");
+      if (file.size > MAX_CLIP_BYTES) throw new Error("Klip je väčší ako 500 MB.");
 
       const { url } = await upload(`klipy/${file.name}`, file, {
         access: "public",
@@ -107,6 +108,14 @@ export function useReel() {
 
   const busy = rendering || clips.some(({ status }) => status === "uploading" || status === "analyzing");
   const reset = () => {
+    const urls = clips.flatMap(({ url }) => (url ? [url] : []));
+    if (urls.length > 0) {
+      fetch("/api/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls }),
+      }).catch((failure) => console.error("cleanup failed", failure));
+    }
     setClips([]);
     setError(null);
     setReel(null);

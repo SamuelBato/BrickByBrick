@@ -19,7 +19,17 @@ const PROMPT = `You analyse one raw video clip from a construction site in Slova
 - severity: use "critical" only for an immediate danger to life. A missing helmet is "medium".
 - When unsure, lower the confidence. Never invent anything.`;
 
+// One retry covers a temporary Gemini error or a broken JSON answer.
 export async function analyzeVideo(video: Buffer) {
+  try {
+    return await callGemini(video);
+  } catch (error) {
+    console.warn("gemini retry", error);
+    return callGemini(video);
+  }
+}
+
+async function callGemini(video: Buffer) {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const response = await ai.models.generateContent({
     model: process.env.GEMINI_MODEL_VLM ?? "gemini-3.5-flash-lite",

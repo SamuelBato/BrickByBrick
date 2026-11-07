@@ -8,6 +8,7 @@ const HAZARDS = ["missing_ppe", "fall_hazard", "unsafe_ladder_or_scaffold", "uns
 
 export const MIN_CLIPS = 3;
 export const MAX_CLIPS = 12;
+export const MAX_CLIP_BYTES = 500 * 1024 * 1024;
 export const MAX_ANALYZED_S = 60;
 const MAX_CLIP_S = 6;
 const MAX_REEL_S = 30;

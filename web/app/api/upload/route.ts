@@ -1,7 +1,6 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
-
-const MAX_CLIP_BYTES = 500 * 1024 * 1024;
+import { MAX_CLIP_BYTES } from "@/lib/plan";
 
 export async function POST(request: Request) {
   try {

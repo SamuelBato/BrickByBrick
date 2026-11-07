@@ -15,6 +15,8 @@ test("rejects every other address", () => {
     "http://abc123.public.blob.vercel-storage.com/klipy/a.mp4",
     "https://abc123.public.blob.vercel-storage.com@evil.example/a.mp4",
     "https://abc123.public.blob.vercel-storage.com.evil.example/a.mp4",
+    "https://abc123.public.blob.vercel-storage.com/reely/reel.mp4",
+    "https://abc123.public.blob.vercel-storage.com/klipy/../reely/reel.mp4",
     "file:///etc/passwd",
     "nie je adresa",
     null,

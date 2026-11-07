@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       contentType: "video/mp4",
     });
 
-    // shortcut: clips whose analysis failed are not in this list and stay in Blob; clear them by hand if the store fills up.
+    // Clips whose analysis failed are not in this list; the reset in useReel removes them.
     await del(clips.map((clip) => clip.url)).catch((error) => console.error("clip cleanup failed", error));
     return NextResponse.json({ url, downloadUrl });
   } catch (error) {
