@@ -2,6 +2,12 @@ import { createHash, timingSafeEqual } from "node:crypto";
 
 const sha256 = (value: string) => createHash("sha256").update(value).digest();
 
+// Visitors may look at pages; every write, the API and the login page need the password.
+export function needsPassword(method: string, pathname: string) {
+  const reading = method === "GET" || method === "HEAD";
+  return !reading || pathname.startsWith("/api/") || pathname === "/prihlasenie";
+}
+
 // Fails closed: without a configured password nobody gets in.
 export function isAuthorized(header: string | null, password: string | undefined) {
   if (!password || !header?.startsWith("Basic ")) return false;

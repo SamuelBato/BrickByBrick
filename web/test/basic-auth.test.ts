@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isAuthorized } from "../lib/basic-auth.ts";
+import { isAuthorized, needsPassword } from "../lib/basic-auth.ts";
+
+test("visitors may only read pages", () => {
+  assert.equal(needsPassword("GET", "/"), false);
+  assert.equal(needsPassword("HEAD", "/stavba/abc"), false);
+  assert.equal(needsPassword("GET", "/_next/static/chunk.js"), false);
+});
+
+test("every write, the API and the login page need the password", () => {
+  for (const method of ["POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) {
+    assert.equal(needsPassword(method, "/stavba/abc"), true);
+  }
+  assert.equal(needsPassword("GET", "/api/render"), true);
+  assert.equal(needsPassword("GET", "/prihlasenie"), true);
+});
 
 const basic = (credentials: string) => `Basic ${Buffer.from(credentials).toString("base64")}`;
 

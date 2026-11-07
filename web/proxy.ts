@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isAuthorized } from "@/lib/basic-auth";
+import { isAuthorized, needsPassword } from "@/lib/basic-auth";
 
-// No matcher on purpose: the whole app, static files included, stays behind the password.
+// No matcher on purpose: every request passes here, so a write can never skip the password.
 export function proxy(request: NextRequest) {
-  if (isAuthorized(request.headers.get("authorization"), process.env.DEMO_PASSWORD)) {
+  if (
+    !needsPassword(request.method, request.nextUrl.pathname) ||
+    isAuthorized(request.headers.get("authorization"), process.env.DEMO_PASSWORD)
+  ) {
     return NextResponse.next();
   }
 
