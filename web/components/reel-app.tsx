@@ -156,7 +156,7 @@ export default function ReelApp({ stavbaId }: { stavbaId: string }) {
         </button>
       )}
 
-      {rendering && <Loading text="Vytváram Reel, môže to trvať do 2 minút" timer />}
+      {rendering && <Loading text="Vytváram Reel, môže to trvať do 4 minút" timer />}
 
       {reel && (
         <section className="card">

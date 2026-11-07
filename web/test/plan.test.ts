@@ -73,8 +73,8 @@ test("transitions overlap the shots, so the finished Reel still has the chosen l
 
 test("with too little footage the Reel is as long as the footage", () => {
   const clips = [clip("a", {}, 4), clip("b", {}, 5)];
-  assert.equal(planReel(clips, { ...options, lengthS: 60 }).lengthS, 9);
-  assert.equal(planReel(clips, { ...options, lengthS: 60, style: "fade" }).lengthS, 8.5);
+  assert.equal(planReel(clips, { ...options, lengthS: 45 }).lengthS, 9);
+  assert.equal(planReel(clips, { ...options, lengthS: 45, style: "fade" }).lengthS, 8.5);
 });
 
 test("captions and badges can be switched off", () => {

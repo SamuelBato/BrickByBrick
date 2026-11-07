@@ -37,7 +37,8 @@ export async function listStavby() {
 
 export async function getStavba(id: string) {
   if (!isId(id)) return null;
-  const result = await get(stavbaPath(id), { access: "public" });
+  // Skips the CDN, which would keep serving a deleted stavba for a minute.
+  const result = await get(stavbaPath(id), { access: "public", useCache: false });
   return result?.statusCode === 200 ? ((await new Response(result.stream).json()) as Stavba) : null;
 }
 

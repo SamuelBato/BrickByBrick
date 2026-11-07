@@ -5,13 +5,14 @@ export const MAX_CLIP_BYTES = 500 * 1024 * 1024;
 export const MAX_ANALYZED_S = 60;
 const MIN_SHOT_S = 3;
 
-export const REEL_LENGTHS = [15, 30, 45, 60] as const;
+// shortcut: no 60 s option, it took 5 min locally against the 300 s Vercel limit; add it back after measuring on Vercel.
+export const REEL_LENGTHS = [15, 30, 45] as const;
 
 export const REEL_STYLES = {
   cut: { label: "Čistý strih", transition: null, overlapS: 0, grade: null },
   fade: { label: "Prelínanie", transition: "fade", overlapS: 0.5, grade: null },
   slide: { label: "Dynamický", transition: "slideleft", overlapS: 0.3, grade: "eq=contrast=1.1:saturation=1.25" },
-  film: { label: "Filmový", transition: "fadeblack", overlapS: 0.6, grade: "eq=contrast=1.05:saturation=0.85,vignette" },
+  film: { label: "Filmový", transition: "fadeblack", overlapS: 0.6, grade: "eq=contrast=1.05:saturation=0.85" },
 } as const;
 
 export const CAPTION_MODES = { bottom: "Dole", center: "V strede", off: "Vypnuté" } as const;
