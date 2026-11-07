@@ -8,3 +8,9 @@ data/
 node_modules/
 *.mp4
 *.mov
+
+# Person A folder, stays local
+A/
+
+# app assets (loading animation, reel outro) are ours, not raw clips
+!web/public/*.mp4
