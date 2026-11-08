@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { analysisJsonSchema, analysisSchema } from "./analysis-schema";
 
-// Sebo tunes this text in AI Studio.
+// This text is tuned in AI Studio.
 const PROMPT = `You analyse one raw video clip from a construction site in Slovakia for an Instagram Reel. Report only what you can see or hear.
 
 - phase: the construction phase shown. Use "unknown" when the footage is not enough.
